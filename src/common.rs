@@ -38,10 +38,11 @@ impl fmt::Debug for FileError {
 impl std::error::Error for FileError {}
 
 pub struct Header {
-    name: String,
-    size: u64,
-    mtime: i64,
-    prefix: String,
+    pub name: String,
+    pub size: u64,
+    pub mtime: i64,
+    pub prefix: String,
+    bytes: Vec<u8>,
 }
 
 impl Header {
@@ -51,9 +52,9 @@ impl Header {
             size: String::from_utf8_lossy(&block[FILENAME_SIZE..SIZE_BEGIN]).parse()?,
             mtime: String::from_utf8_lossy(&block[SIZE_BEGIN..MTIME_BEGIN]).parse()?,
             prefix: String::from_utf8_lossy(&block[MTIME_BEGIN..HEADER_SIZE]).to_string(),
+            bytes: block.clone(),
         })
     }
-
     pub fn eof_block(self) -> Vec<u8> {
         vec![0; HEADER_SIZE]
     }
@@ -61,33 +62,53 @@ impl Header {
     pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Header, Box<dyn Error>> {
         let metadata = std::fs::metadata(&path)?;
         let name = path.as_ref().file_name().ok_or(FileError::NameIsNone)?;
-        if name.len() > FILENAME_SIZE {
+        let name_len_diff = FILENAME_SIZE as isize - name.len() as isize;
+        if name_len_diff < 0 {
             Err(FileError::NameLengthExceeded)?;
         }
+        let name_len_diff = name_len_diff as usize;
         let name = name.to_string_lossy().to_string();
         let size = metadata.size();
-        if size.to_string().len() > CONTENT_SIZE {
+        let size_str = size.to_string();
+        let size_str_len = size_str.len();
+        let size_str_len_diff = CONTENT_SIZE as isize - size_str_len as isize;
+        if size_str_len_diff < 0 {
             Err(FileError::SizeLengthExceeded)?;
         }
+        let size_str_len_diff = size_str_len_diff as usize;
         let mtime = metadata.mtime();
-        if mtime.to_string().len() > MTIME_SIZE {
+        let mtime_str = mtime.to_string();
+        let mtime_str_len = mtime_str.len();
+        let mtime_str_len_diff = MTIME_SIZE as isize - mtime_str_len as isize;
+        if mtime_str_len_diff < 0 {
             Err(FileError::MtimeLengthExceeded)?;
         }
+        let mtime_str_len_diff = mtime_str_len_diff as usize;
         let prefix = path
             .as_ref()
             .parent()
             .map(|p| p.to_string_lossy().to_string())
             .unwrap_or(String::from(""));
 
-        if prefix.len() > PREFIX_SIZE {
+        let prefix_len_diff = PREFIX_SIZE as isize - prefix.len() as isize;
+        if prefix_len_diff < 0 {
             Err(FileError::PrefixLengthExceeded)?;
         }
+
+        let mut bytes = name.clone().into_bytes();
+        bytes.extend(std::iter::repeat(0).take(name_len_diff));
+        bytes.extend(size_str.into_bytes());
+        bytes.extend(std::iter::repeat(0).take(size_str_len_diff));
+        bytes.extend(mtime_str.into_bytes());
+        bytes.extend(std::iter::repeat(0).take(mtime_str_len_diff));
+        bytes.extend(prefix.clone().into_bytes());
 
         Ok(Header {
             name,
             size,
             mtime,
             prefix,
+            bytes,
         })
     }
 }
