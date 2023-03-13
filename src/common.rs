@@ -8,6 +8,7 @@ const PREFIX_SIZE: usize = 4096;
 const SIZE_BEGIN: usize = FILENAME_SIZE + CONTENT_SIZE;
 const MTIME_BEGIN: usize = SIZE_BEGIN + MTIME_SIZE;
 
+#[derive(Debug)]
 pub enum FileError {
     NameIsNone,
     NameLengthExceeded,
@@ -31,20 +32,14 @@ impl fmt::Display for FileError {
     }
 }
 
-impl fmt::Debug for FileError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{{ file: {}, line: {} }}", file!(), line!()) // programmer-facing output
-    }
-}
-
-impl std::error::Error for FileError {}
+impl Error for FileError {}
 
 pub struct Header {
     pub name: String,
     pub size: u64,
     pub mtime: i64,
     pub prefix: String,
-    bytes: Vec<u8>,
+    pub bytes: Vec<u8>,
 }
 
 fn block_to_string(block: &[u8], lower: usize, upper: usize) -> Result<String, FromUtf8Error> {
@@ -52,19 +47,19 @@ fn block_to_string(block: &[u8], lower: usize, upper: usize) -> Result<String, F
         block[lower..upper]
             .iter()
             .take_while(|c| **c != 0)
-            .map(|c| c.clone())
+            .copied()
             .collect(),
     )
 }
 
 impl Header {
-    pub fn from_bytes(block: &Vec<u8>) -> Result<Header, Box<dyn Error>> {
+    pub fn from_bytes(block: &[u8]) -> Result<Header, Box<dyn Error>> {
         Ok(Header {
             name: block_to_string(block, 0, FILENAME_SIZE)?,
             size: block_to_string(block, FILENAME_SIZE, SIZE_BEGIN)?.parse()?,
             mtime: block_to_string(block, SIZE_BEGIN, MTIME_BEGIN)?.parse()?,
             prefix: block_to_string(block, MTIME_BEGIN, HEADER_SIZE)?,
-            bytes: block.clone(),
+            bytes: block.to_owned(),
         })
     }
     pub fn eof_block() -> Vec<u8> {

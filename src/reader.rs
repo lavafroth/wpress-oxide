@@ -1,12 +1,9 @@
 use crate::common::{FileError, Header, HEADER_SIZE};
 use clean_path::Clean;
 use std::error::Error;
-use std::io::{Read, Seek, SeekFrom, Write};
+use std::io::{Read, Seek};
 use std::path::{Path, PathBuf};
-use std::{
-    fs,
-    io::{self, prelude::*},
-};
+use std::{fs, io};
 pub struct Reader {
     file: std::fs::File,
     count: usize,
@@ -19,7 +16,7 @@ impl Reader {
     }
 
     pub fn extract(&mut self) -> Result<usize, Box<dyn Error>> {
-        self.file.seek(SeekFrom::Start(0))?;
+        self.file.rewind()?;
         loop {
             let block = self.header_block()?;
             if Header::eof_block() == block {
