@@ -1,6 +1,6 @@
-use std::{error::Error, fmt, os::unix::prelude::MetadataExt, path::Path};
+use std::{error::Error, fmt, os::unix::prelude::MetadataExt, path::Path, string::FromUtf8Error};
 
-const HEADER_SIZE: usize = 4377;
+pub const HEADER_SIZE: usize = 4377;
 const FILENAME_SIZE: usize = 255;
 const CONTENT_SIZE: usize = 14;
 const MTIME_SIZE: usize = 12;
@@ -8,12 +8,13 @@ const PREFIX_SIZE: usize = 4096;
 const SIZE_BEGIN: usize = FILENAME_SIZE + CONTENT_SIZE;
 const MTIME_BEGIN: usize = SIZE_BEGIN + MTIME_SIZE;
 
-enum FileError {
+pub enum FileError {
     NameIsNone,
     NameLengthExceeded,
     SizeLengthExceeded,
     MtimeLengthExceeded,
     PrefixLengthExceeded,
+    IncompleteHeader,
 }
 
 impl fmt::Display for FileError {
@@ -23,7 +24,8 @@ impl fmt::Display for FileError {
             Self::NameLengthExceeded => "Filename is longerthan the maximum of 255 bytes",
             Self::SizeLengthExceeded => "String representation of the file's size exceeds the maximum of 14 bytes",
             Self::MtimeLengthExceeded => "String representation of the file's UNIX modified time exceeds the maximum of 12 bytes",
-            Self::PrefixLengthExceeded => "String representation of the file's parent directories exceeds the maximum of 4096 bytes"
+            Self::PrefixLengthExceeded => "String representation of the file's parent directories exceeds the maximum of 4096 bytes",
+                Self::IncompleteHeader => "While reading file: Header block ended prematurely."
         };
         write!(f, "{}", err)
     }
@@ -45,17 +47,27 @@ pub struct Header {
     bytes: Vec<u8>,
 }
 
+fn block_to_string(block: &[u8], lower: usize, upper: usize) -> Result<String, FromUtf8Error> {
+    String::from_utf8(
+        block[lower..upper]
+            .iter()
+            .take_while(|c| **c != 0)
+            .map(|c| c.clone())
+            .collect(),
+    )
+}
+
 impl Header {
     pub fn from_bytes(block: &Vec<u8>) -> Result<Header, Box<dyn Error>> {
         Ok(Header {
-            name: String::from_utf8_lossy(&block[0..FILENAME_SIZE]).to_string(),
-            size: String::from_utf8_lossy(&block[FILENAME_SIZE..SIZE_BEGIN]).parse()?,
-            mtime: String::from_utf8_lossy(&block[SIZE_BEGIN..MTIME_BEGIN]).parse()?,
-            prefix: String::from_utf8_lossy(&block[MTIME_BEGIN..HEADER_SIZE]).to_string(),
+            name: block_to_string(block, 0, FILENAME_SIZE)?,
+            size: block_to_string(block, FILENAME_SIZE, SIZE_BEGIN)?.parse()?,
+            mtime: block_to_string(block, SIZE_BEGIN, MTIME_BEGIN)?.parse()?,
+            prefix: block_to_string(block, MTIME_BEGIN, HEADER_SIZE)?,
             bytes: block.clone(),
         })
     }
-    pub fn eof_block(self) -> Vec<u8> {
+    pub fn eof_block() -> Vec<u8> {
         vec![0; HEADER_SIZE]
     }
 
