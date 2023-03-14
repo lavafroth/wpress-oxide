@@ -12,14 +12,18 @@ pub struct Writer {
 }
 
 impl Writer {
-    fn new<P: AsRef<Path>>(path: P) -> Result<Writer, std::io::Error> {
+    /// Creates a new writer with the destination being the path supplied.
+    pub fn new<P: AsRef<Path>>(path: P) -> Result<Writer, std::io::Error> {
         Ok(Writer {
             file: File::create(path)?,
             paths: vec![],
         })
     }
 
-    fn add<P: AsRef<Path>>(&mut self, path: P) -> Result<(), Box<dyn Error>> {
+    /// Lazily adds paths to the `Writer`. It merely tells the `Writer` to note the supplied path
+    /// and does not write to the underlying file. To write to the underlying file, use the
+    /// `write` method after `add`ing all the files.
+    pub fn add<P: AsRef<Path>>(&mut self, path: P) -> Result<(), Box<dyn Error>> {
         let path = path.as_ref();
         // If the given path is a directory,
         // recursively add all the files and
@@ -35,12 +39,10 @@ impl Writer {
         Ok(())
     }
 
-    /// write consumes the current object. It writes header
-    /// structures and associated data to the underlying
-    /// file handle. Since the object is consumed, the
-    /// file is closed on drop, making sure we cannot
-    /// incorrectly write multiple times to the same file.
-    fn write(mut self) -> Result<(), Box<dyn Error>> {
+    /// Writes header structures and associated data to the underlying file handle. Since the
+    /// object is consumed, the file is closed on drop, making sure we cannot incorrectly write
+    /// multiple times to the same file.
+    pub fn write(mut self) -> Result<(), Box<dyn Error>> {
         for path in self.paths.iter() {
             let header = Header::from_file(path)?;
             let mut handle = File::open(path)?;
