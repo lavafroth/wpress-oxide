@@ -4,8 +4,7 @@ mod writer;
 
 pub use crate::common::{Header, ParseError};
 pub use crate::reader::Reader;
-
-// pub use crate::writer::Writer;
+pub use crate::writer::Writer;
 
 #[cfg(test)]
 mod tests {
