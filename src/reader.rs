@@ -10,6 +10,7 @@ pub struct Reader {
 }
 
 impl Reader {
+    /// Creates a new `Reader` with the path supplied as the source file.
     pub fn new<P: AsRef<Path>>(path: P) -> Result<Reader, Box<dyn Error>> {
         let mut file = std::fs::File::open(path)?;
         let mut headers = Vec::new();
@@ -29,7 +30,9 @@ impl Reader {
         Ok(Reader { file, headers })
     }
 
-    pub fn extract(&mut self) -> Result<(), Box<dyn Error>> {
+    /// Extracts all the files inside the wpress archive to the provided destination directory.
+    pub fn extract_to<P: AsRef<Path>>(&mut self, destination: P) -> Result<(), Box<dyn Error>> {
+        let destination = destination.as_ref();
         self.file.rewind()?;
         for header in self.headers.iter() {
             self.file.seek(io::SeekFrom::Current(HEADER_SIZE as i64))?;
@@ -40,8 +43,8 @@ impl Reader {
             if clean_path.starts_with("/") {
                 clean_path = clean_path.strip_prefix("/")?.to_path_buf()
             }
-            let path = Path::new(".").join(clean_path);
-            let dir = path.parent().unwrap_or(Path::new("."));
+            let path = Path::new(destination).join(clean_path);
+            let dir = path.parent().unwrap_or(Path::new(destination));
             fs::create_dir_all(dir)?;
             let mut handle = fs::File::create(path)?;
             io::copy(&mut (&mut self.file).take(header.size), &mut handle)?;
@@ -49,18 +52,28 @@ impl Reader {
         Ok(())
     }
 
+    /// Extracts all the files inside the wpress archive to the current directory.
+    pub fn extract(&mut self) -> Result<(), Box<dyn Error>> {
+        self.extract_to(".")
+    }
+
+    /// Returns number of files in the current archive.
     pub fn files_count(&self) -> usize {
         self.headers.len()
     }
 
+    /// Returns a borrowed vector of headers or metadata about the files in the archive.
     pub fn headers(&self) -> &Vec<Header> {
         &self.headers
     }
 
+    /// Returns a copied vector of headers or metadata about the files in the archive.
     pub fn headers_owned(&self) -> Vec<Header> {
         self.headers.clone()
     }
 
+    /// Extract a single file or path to a destination directory while preserving the directory
+    /// hierarchy.
     pub fn extract_file<P: AsRef<Path>>(
         &mut self,
         filename: P,

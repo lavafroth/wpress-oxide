@@ -53,4 +53,8 @@ impl Writer {
         self.file.write(EOF_BLOCK)?;
         Ok(())
     }
+
+    pub fn files_count(&self) -> usize {
+        self.paths.len()
+    }
 }
