@@ -1,4 +1,4 @@
-use crate::common::{FileError, Header, EOF_BLOCK, HEADER_SIZE};
+use crate::common::{Header, ParseError, EOF_BLOCK, HEADER_SIZE};
 use clean_path::Clean;
 use std::error::Error;
 use std::io::{Read, Seek, SeekFrom};
@@ -16,7 +16,7 @@ impl Reader {
         loop {
             let mut buf = vec![0; HEADER_SIZE];
             if HEADER_SIZE != file.read(&mut buf)? {
-                Err(FileError::IncompleteHeader)?;
+                Err(ParseError::IncompleteHeader)?;
             }
             if EOF_BLOCK == buf {
                 break;

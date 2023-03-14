@@ -10,7 +10,7 @@ const MTIME_BEGIN: usize = SIZE_BEGIN + MTIME_SIZE;
 pub const EOF_BLOCK: &[u8] = &[0; HEADER_SIZE];
 
 #[derive(Debug)]
-pub enum FileError {
+pub enum ParseError {
     NameIsNone,
     NameLengthExceeded,
     SizeLengthExceeded,
@@ -19,7 +19,7 @@ pub enum FileError {
     IncompleteHeader,
 }
 
-impl fmt::Display for FileError {
+impl fmt::Display for ParseError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let err = match self {
             Self::NameIsNone => "File has no associated name: expected Some, got None",
@@ -33,7 +33,7 @@ impl fmt::Display for FileError {
     }
 }
 
-impl Error for FileError {}
+impl Error for ParseError {}
 
 #[derive(Clone)]
 pub struct Header {
@@ -67,10 +67,10 @@ impl Header {
 
     pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Header, Box<dyn Error>> {
         let metadata = std::fs::metadata(&path)?;
-        let name = path.as_ref().file_name().ok_or(FileError::NameIsNone)?;
+        let name = path.as_ref().file_name().ok_or(ParseError::NameIsNone)?;
         let name_len_diff = FILENAME_SIZE as isize - name.len() as isize;
         if name_len_diff < 0 {
-            Err(FileError::NameLengthExceeded)?;
+            Err(ParseError::NameLengthExceeded)?;
         }
         let name_len_diff = name_len_diff as usize;
         let name = name.to_string_lossy().to_string();
@@ -79,7 +79,7 @@ impl Header {
         let size_str_len = size_str.len();
         let size_str_len_diff = CONTENT_SIZE as isize - size_str_len as isize;
         if size_str_len_diff < 0 {
-            Err(FileError::SizeLengthExceeded)?;
+            Err(ParseError::SizeLengthExceeded)?;
         }
         let size_str_len_diff = size_str_len_diff as usize;
         let mtime = metadata.mtime();
@@ -87,7 +87,7 @@ impl Header {
         let mtime_str_len = mtime_str.len();
         let mtime_str_len_diff = MTIME_SIZE as isize - mtime_str_len as isize;
         if mtime_str_len_diff < 0 {
-            Err(FileError::MtimeLengthExceeded)?;
+            Err(ParseError::MtimeLengthExceeded)?;
         }
         let mtime_str_len_diff = mtime_str_len_diff as usize;
         let prefix = path
@@ -98,7 +98,7 @@ impl Header {
 
         let prefix_len_diff = PREFIX_SIZE as isize - prefix.len() as isize;
         if prefix_len_diff < 0 {
-            Err(FileError::PrefixLengthExceeded)?;
+            Err(ParseError::PrefixLengthExceeded)?;
         }
 
         let mut bytes = name.clone().into_bytes();
