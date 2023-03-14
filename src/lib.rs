@@ -10,20 +10,23 @@ mod tests {
     fn extract_testdata() -> Result<(), Box<dyn std::error::Error>> {
         let mut r = reader::Reader::new("test/test_archive.wpress")?;
         r.extract()?;
+        std::fs::remove_dir_all("repos")?;
         Ok(())
     }
 
     #[test]
     fn extract_single_filename() -> Result<(), Box<dyn std::error::Error>> {
         let mut r = reader::Reader::new("test/test_archive.wpress")?;
-        r.extract_file("lipsum.txt", "lorem_ipsum_name")?;
+        r.extract_file("lipsum.txt", "test_single_filename")?;
+        std::fs::remove_dir_all("test_single_filename")?;
         Ok(())
     }
 
     #[test]
     fn extract_single_path() -> Result<(), Box<dyn std::error::Error>> {
         let mut r = reader::Reader::new("test/test_archive.wpress")?;
-        r.extract_file("repos/wpress/testdata/lipsum.txt", "lorem_ipsum_path")?;
+        r.extract_file("repos/wpress/testdata/lipsum.txt", "test_single_path")?;
+        std::fs::remove_dir_all("test_single_path")?;
         Ok(())
     }
 }
