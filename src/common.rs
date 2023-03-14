@@ -7,6 +7,7 @@ const MTIME_SIZE: usize = 12;
 const PREFIX_SIZE: usize = 4096;
 const SIZE_BEGIN: usize = FILENAME_SIZE + CONTENT_SIZE;
 const MTIME_BEGIN: usize = SIZE_BEGIN + MTIME_SIZE;
+pub const EOF_BLOCK: &[u8] = &[0; HEADER_SIZE];
 
 #[derive(Debug)]
 pub enum FileError {
@@ -34,6 +35,7 @@ impl fmt::Display for FileError {
 
 impl Error for FileError {}
 
+#[derive(Clone)]
 pub struct Header {
     pub name: String,
     pub size: u64,
@@ -61,9 +63,6 @@ impl Header {
             prefix: block_to_string(block, MTIME_BEGIN, HEADER_SIZE)?,
             bytes: block.to_owned(),
         })
-    }
-    pub fn eof_block() -> Vec<u8> {
-        vec![0; HEADER_SIZE]
     }
 
     pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Header, Box<dyn Error>> {
