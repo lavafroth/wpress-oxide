@@ -1,4 +1,4 @@
-use std::{error::Error, fmt, os::unix::prelude::MetadataExt, path::Path, string::FromUtf8Error};
+use std::{error::Error, fmt, os::unix::prelude::MetadataExt, path::Path};
 
 pub const HEADER_SIZE: usize = 4377;
 const FILENAME_SIZE: usize = 255;
@@ -35,6 +35,8 @@ impl fmt::Display for ParseError {
 
 impl Error for ParseError {}
 
+pub type Result<T> = std::result::Result<T, Box<dyn Error>>;
+
 #[derive(Clone)]
 pub struct Header {
     pub name: String,
@@ -44,18 +46,18 @@ pub struct Header {
     pub bytes: Vec<u8>,
 }
 
-fn block_to_string(block: &[u8], lower: usize, upper: usize) -> Result<String, FromUtf8Error> {
-    String::from_utf8(
+fn block_to_string(block: &[u8], lower: usize, upper: usize) -> Result<String> {
+    Ok(String::from_utf8(
         block[lower..upper]
             .iter()
             .take_while(|c| **c != 0)
             .copied()
             .collect(),
-    )
+    )?)
 }
 
 impl Header {
-    pub fn from_bytes(block: &[u8]) -> Result<Header, Box<dyn Error>> {
+    pub fn from_bytes(block: &[u8]) -> Result<Header> {
         Ok(Header {
             name: block_to_string(block, 0, FILENAME_SIZE)?,
             size: block_to_string(block, FILENAME_SIZE, SIZE_BEGIN)?.parse()?,
@@ -65,49 +67,44 @@ impl Header {
         })
     }
 
-    pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Header, Box<dyn Error>> {
+    pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Header> {
         let metadata = std::fs::metadata(&path)?;
-        let name = path.as_ref().file_name().ok_or(ParseError::NameIsNone)?;
-        let name_len_diff = FILENAME_SIZE as isize - name.len() as isize;
-        if name_len_diff < 0 {
-            Err(ParseError::NameLengthExceeded)?;
-        }
-        let name_len_diff = name_len_diff as usize;
+        let path = path.as_ref();
+
+        let name = path.file_name().ok_or(ParseError::NameIsNone)?;
+        let name_len_diff = FILENAME_SIZE
+            .checked_sub(name.len())
+            .ok_or(ParseError::NameLengthExceeded)?;
+
         let name = name.to_string_lossy().to_string();
+
         let size = metadata.size();
         let size_str = size.to_string();
-        let size_str_len = size_str.len();
-        let size_str_len_diff = CONTENT_SIZE as isize - size_str_len as isize;
-        if size_str_len_diff < 0 {
-            Err(ParseError::SizeLengthExceeded)?;
-        }
-        let size_str_len_diff = size_str_len_diff as usize;
+        let size_len_diff = CONTENT_SIZE
+            .checked_sub(size_str.len())
+            .ok_or(ParseError::SizeLengthExceeded)?;
+
         let mtime = metadata.mtime();
         let mtime_str = mtime.to_string();
-        let mtime_str_len = mtime_str.len();
-        let mtime_str_len_diff = MTIME_SIZE as isize - mtime_str_len as isize;
-        if mtime_str_len_diff < 0 {
-            Err(ParseError::MtimeLengthExceeded)?;
-        }
-        let mtime_str_len_diff = mtime_str_len_diff as usize;
-        let prefix = path
-            .as_ref()
-            .parent()
-            .map(|p| p.to_string_lossy().to_string())
-            .unwrap_or(String::from(""));
+        let mtime_len_diff = MTIME_SIZE
+            .checked_sub(mtime_str.len())
+            .ok_or(ParseError::MtimeLengthExceeded)?;
 
-        let prefix_len_diff = PREFIX_SIZE as isize - prefix.len() as isize;
-        if prefix_len_diff < 0 {
-            Err(ParseError::PrefixLengthExceeded)?;
-        }
+        let prefix = path
+            .parent()
+            .map_or(String::from(""), |p| p.to_string_lossy().to_string());
+        let prefix_len_diff = PREFIX_SIZE
+            .checked_sub(prefix.len())
+            .ok_or(ParseError::PrefixLengthExceeded)?;
 
         let mut bytes = name.clone().into_bytes();
-        bytes.extend(std::iter::repeat(0).take(name_len_diff));
-        bytes.extend(size_str.into_bytes());
-        bytes.extend(std::iter::repeat(0).take(size_str_len_diff));
-        bytes.extend(mtime_str.into_bytes());
-        bytes.extend(std::iter::repeat(0).take(mtime_str_len_diff));
-        bytes.extend(prefix.clone().into_bytes());
+        bytes.resize(name_len_diff, 0);
+        bytes.extend(size_str.as_bytes());
+        bytes.resize(size_len_diff, 0);
+        bytes.extend(mtime_str.as_bytes());
+        bytes.resize(mtime_len_diff, 0);
+        bytes.extend(prefix.as_bytes());
+        bytes.resize(prefix_len_diff, 0);
 
         Ok(Header {
             name,

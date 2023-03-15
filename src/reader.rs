@@ -1,21 +1,31 @@
-use crate::common::{Header, ParseError, EOF_BLOCK, HEADER_SIZE};
+use crate::common::{Header, ParseError, Result, EOF_BLOCK, HEADER_SIZE};
 use clean_path::Clean;
-use std::error::Error;
-use std::io::{Read, Seek, SeekFrom};
-use std::path::{Path, PathBuf};
-use std::{fs, io};
+use std::{
+    fs::{create_dir_all, File},
+    io::{self, Read, Seek, SeekFrom},
+    path::{Path, PathBuf},
+};
+
 pub struct Reader {
     file: std::fs::File,
     headers: Vec<Header>,
 }
 
+fn trim_clean<P: AsRef<Path>>(path: P) -> Result<PathBuf> {
+    let cleaned = path.as_ref().clean();
+    if cleaned.starts_with("/") {
+        return Ok(cleaned.strip_prefix("/")?.to_path_buf());
+    }
+    Ok(cleaned)
+}
+
 impl Reader {
     /// Creates a new `Reader` with the path supplied as the source file.
-    pub fn new<P: AsRef<Path>>(path: P) -> Result<Reader, Box<dyn Error>> {
+    pub fn new<P: AsRef<Path>>(path: P) -> Result<Reader> {
         let mut file = std::fs::File::open(path)?;
         let mut headers = Vec::new();
+        let mut buf = vec![0; HEADER_SIZE];
         loop {
-            let mut buf = vec![0; HEADER_SIZE];
             if HEADER_SIZE != file.read(&mut buf)? {
                 Err(ParseError::IncompleteHeader)?;
             }
@@ -30,30 +40,24 @@ impl Reader {
         Ok(Reader { file, headers })
     }
 
-    /// Extracts all the files inside the wpress archive to the provided destination directory.
-    pub fn extract_to<P: AsRef<Path>>(&mut self, destination: P) -> Result<(), Box<dyn Error>> {
+    /// Extracts all the files inside the archive to the provided destination directory.
+    pub fn extract_to<P: AsRef<Path>>(&mut self, destination: P) -> Result<()> {
         let destination = destination.as_ref();
         self.file.rewind()?;
         for header in self.headers.iter() {
             self.file.seek(io::SeekFrom::Current(HEADER_SIZE as i64))?;
-            let mut clean_path = [&header.prefix, &header.name]
-                .iter()
-                .collect::<PathBuf>()
-                .clean();
-            if clean_path.starts_with("/") {
-                clean_path = clean_path.strip_prefix("/")?.to_path_buf()
-            }
-            let path = Path::new(destination).join(clean_path);
+            let clean = trim_clean([&header.prefix, &header.name].iter().collect::<PathBuf>())?;
+            let path = Path::new(destination).join(clean);
             let dir = path.parent().unwrap_or(Path::new(destination));
-            fs::create_dir_all(dir)?;
-            let mut handle = fs::File::create(path)?;
+            create_dir_all(dir)?;
+            let mut handle = File::create(path)?;
             io::copy(&mut (&mut self.file).take(header.size), &mut handle)?;
         }
         Ok(())
     }
 
-    /// Extracts all the files inside the wpress archive to the current directory.
-    pub fn extract(&mut self) -> Result<(), Box<dyn Error>> {
+    /// Extracts all the files inside the archive to the current directory.
+    pub fn extract(&mut self) -> Result<()> {
         self.extract_to(".")
     }
 
@@ -72,32 +76,20 @@ impl Reader {
         self.headers.clone()
     }
 
-    /// Extract a single file or path to a destination directory while preserving the directory
-    /// hierarchy.
-    pub fn extract_file<P: AsRef<Path>>(
-        &mut self,
-        filename: P,
-        destination: P,
-    ) -> Result<(), Box<dyn Error>> {
+    /// Extract a single file or path to a destination directory preserving the directory hierarchy.
+    pub fn extract_file<P: AsRef<Path>>(&mut self, filename: P, destination: P) -> Result<()> {
         let mut offset = 0;
-        let filename = filename.as_ref();
+        let q = filename.as_ref();
         let destination = destination.as_ref();
         for header in self.headers.iter() {
             offset += HEADER_SIZE as u64;
             let original_path = [&header.prefix, &header.name].iter().collect::<PathBuf>();
-            let mut cleaned = original_path.clean();
-            if cleaned.starts_with("/") {
-                cleaned = cleaned.strip_prefix("/")?.to_path_buf()
-            }
-
-            if Path::new(&header.name) == filename
-                || cleaned == filename
-                || original_path == filename
-            {
-                let path = destination.join(cleaned);
+            let clean = trim_clean(&original_path)?;
+            if Path::new(&header.name) == q || clean == q || original_path == q {
+                let path = destination.join(clean);
                 let dir = path.parent().unwrap_or(destination);
-                fs::create_dir_all(dir)?;
-                let mut handle = fs::File::create(path)?;
+                create_dir_all(dir)?;
+                let mut handle = File::create(path)?;
                 self.file.seek(SeekFrom::Start(offset))?;
                 io::copy(&mut (&mut self.file).take(header.size), &mut handle)?;
                 break;
