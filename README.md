@@ -1,6 +1,6 @@
-### wpress-oxide
+![](assets/wpress-oxide.png)
 
-![build](https://github.com/lavafroth/wpress-oxide/actions/workflows/rust.yml/badge.svg)
+### wp-oxide ![build](https://github.com/lavafroth/wpress-oxide/actions/workflows/rust.yml/badge.svg)
 
 A rust library to interact with the wpress archive format.
 
