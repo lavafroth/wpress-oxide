@@ -76,8 +76,10 @@ impl Reader {
         self.headers.clone()
     }
 
-    /// Extract a single file or path to a destination directory preserving the directory hierarchy.
+    /// Extract a single file, given either its name or *complete path inside the archive*, to a
+    /// destination directory. Preserves the directory hierarchy of the archive during extraction.
     pub fn extract_file<P: AsRef<Path>>(&mut self, filename: P, destination: P) -> Result<()> {
+        self.file.rewind()?;
         let mut offset = 0;
         let q = filename.as_ref();
         let destination = destination.as_ref();
@@ -85,6 +87,7 @@ impl Reader {
             offset += HEADER_SIZE as u64;
             let original_path = [&header.prefix, &header.name].iter().collect::<PathBuf>();
             let clean = trim_clean(&original_path)?;
+            println!("{:?}", clean);
             if Path::new(&header.name) == q || clean == q || original_path == q {
                 let path = destination.join(clean);
                 let dir = path.parent().unwrap_or(destination);

@@ -44,12 +44,13 @@ impl Writer {
     pub fn write(mut self) -> Result<()> {
         for path in self.paths.iter() {
             let header = Header::from_file(path)?;
+            println!("{:?}", header);
             let mut handle = File::open(path)?;
             let _ = self.file.write(&header.bytes)?;
             copy(&mut handle, &mut self.file)?;
         }
         // This marks the end of the file.
-        let _ = self.file.write(EOF_BLOCK)?;
+        self.file.write(EOF_BLOCK)?;
         Ok(())
     }
 

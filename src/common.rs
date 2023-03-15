@@ -37,7 +37,7 @@ impl Error for ParseError {}
 
 pub type Result<T> = std::result::Result<T, Box<dyn Error>>;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Header {
     pub name: String,
     pub size: u64,
@@ -79,13 +79,13 @@ impl Header {
         let name = name.to_string_lossy().to_string();
 
         let size = metadata.size();
-        let size_str = size.to_string();
+        let size_str = size.to_string().into_bytes();
         let size_len_diff = CONTENT_SIZE
             .checked_sub(size_str.len())
             .ok_or(ParseError::SizeLengthExceeded)?;
 
         let mtime = metadata.mtime();
-        let mtime_str = mtime.to_string();
+        let mtime_str = mtime.to_string().into_bytes();
         let mtime_len_diff = MTIME_SIZE
             .checked_sub(mtime_str.len())
             .ok_or(ParseError::MtimeLengthExceeded)?;
@@ -97,14 +97,19 @@ impl Header {
             .checked_sub(prefix.len())
             .ok_or(ParseError::PrefixLengthExceeded)?;
 
-        let mut bytes = name.clone().into_bytes();
-        bytes.resize(name_len_diff, 0);
-        bytes.extend(size_str.as_bytes());
-        bytes.resize(size_len_diff, 0);
-        bytes.extend(mtime_str.as_bytes());
-        bytes.resize(mtime_len_diff, 0);
-        bytes.extend(prefix.as_bytes());
-        bytes.resize(prefix_len_diff, 0);
+        let bytes: Vec<u8> = [
+            name.clone().into_bytes(),
+            vec![0; name_len_diff],
+            size_str,
+            vec![0; size_len_diff],
+            mtime_str,
+            vec![0; mtime_len_diff],
+            prefix.clone().into_bytes(),
+            vec![0; prefix_len_diff],
+        ]
+        .into_iter()
+        .flatten()
+        .collect();
 
         Ok(Header {
             name,
