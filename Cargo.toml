@@ -1,12 +1,12 @@
 [package]
 name = "wpress-oxide"
 description = "A rust library to interact with the wpress archive format."
-version = "1.0.0"
+version = "1.1.0"
 edition = "2021"
 readme = "README.md"
 repository = "https://github.com/lavafroth/wpress-oxide"
 license = "GPL-3.0-or-later"
-keywords = ["wordpress", "archive"]
+keywords = ["wordpress", "archive", "wpress", "cli"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
