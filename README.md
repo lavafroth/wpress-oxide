@@ -1,6 +1,6 @@
 ![](assets/wpress-oxide.png)
 
-### wp-oxide ![build](https://github.com/lavafroth/wpress-oxide/actions/workflows/rust.yml/badge.svg)
+# wpress-oxide ![build](https://github.com/lavafroth/wpress-oxide/actions/workflows/rust.yml/badge.svg)
 
 A rust library to interact with the wpress archive format.
 
@@ -21,8 +21,6 @@ use std::error::Error;
 fn main() -> Result<(), Box<dyn Error>> {
   let reader = Reader::new("the_archive_name.wpress")?;
   reader.extract()?;
-  // or
-  // reader.extract_to("some_destination_directory")?;
   Ok(())
 }
 ```
