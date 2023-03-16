@@ -2,8 +2,8 @@ use std::{
     error::Error,
     fmt,
     io::{Cursor, Seek, SeekFrom, Write},
-    os::unix::prelude::MetadataExt,
     path::Path,
+    time::SystemTime,
 };
 
 pub const HEADER_SIZE: usize = 4377;
@@ -50,7 +50,7 @@ pub type Result<T> = std::result::Result<T, Box<dyn Error>>;
 pub struct Header {
     pub name: String,
     pub size: u64,
-    pub mtime: i64,
+    pub mtime: u64,
     pub prefix: String,
     pub bytes: Vec<u8>,
 }
@@ -87,12 +87,15 @@ impl Header {
 
         let name = name.to_string_lossy().to_string();
 
-        let size = metadata.size();
+        let size = metadata.len();
         let size_str = size.to_string();
         SIZE.checked_sub(size_str.len())
             .ok_or(ParseError::SizeLengthExceeded)?;
 
-        let mtime = metadata.mtime();
+        let mtime = metadata
+            .modified()?
+            .duration_since(SystemTime::UNIX_EPOCH)?
+            .as_secs();
         let mtime_str = mtime.to_string();
         MTIME
             .checked_sub(mtime_str.len())
