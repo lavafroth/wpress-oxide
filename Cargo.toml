@@ -9,6 +9,7 @@ license = "GPL-3.0-or-later"
 keywords = ["wordpress", "archive", "wpress", "cli"]
 include = [
     "**/*.rs",
+    "tests",
     "Cargo.toml",
 ]
 
