@@ -46,11 +46,11 @@ impl Writer {
             let header = Header::from_file(path)?;
             println!("{:?}", header);
             let mut handle = File::open(path)?;
-            let _ = self.file.write(&header.bytes)?;
+            self.file.write_all(&header.bytes)?;
             copy(&mut handle, &mut self.file)?;
         }
         // This marks the end of the file.
-        self.file.write(EOF_BLOCK)?;
+        self.file.write_all(EOF_BLOCK)?;
         Ok(())
     }
 
