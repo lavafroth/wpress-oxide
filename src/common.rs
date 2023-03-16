@@ -1,12 +1,21 @@
-use std::{error::Error, fmt, os::unix::prelude::MetadataExt, path::Path};
+use std::{
+    error::Error,
+    fmt,
+    io::{Cursor, Seek, SeekFrom, Write},
+    os::unix::prelude::MetadataExt,
+    path::Path,
+};
 
 pub const HEADER_SIZE: usize = 4377;
-const FILENAME_SIZE: usize = 255;
-const CONTENT_SIZE: usize = 14;
-const MTIME_SIZE: usize = 12;
-const PREFIX_SIZE: usize = 4096;
-const SIZE_BEGIN: usize = FILENAME_SIZE + CONTENT_SIZE;
-const MTIME_BEGIN: usize = SIZE_BEGIN + MTIME_SIZE;
+const FILENAME: usize = 255;
+const SIZE_BEGIN: usize = FILENAME;
+const SIZE: usize = 14;
+const MTIME: usize = 12;
+const PREFIX: usize = 4096;
+const SIZE_END: usize = FILENAME + SIZE;
+const MTIME_BEGIN: usize = SIZE_END;
+const MTIME_END: usize = SIZE_END + MTIME;
+const PREFIX_BEGIN: usize = MTIME_END;
 pub const EOF_BLOCK: &[u8] = &[0; HEADER_SIZE];
 
 #[derive(Debug)]
@@ -46,7 +55,7 @@ pub struct Header {
     pub bytes: Vec<u8>,
 }
 
-fn block_to_string(block: &[u8], lower: usize, upper: usize) -> Result<String> {
+fn read_block(block: &[u8], lower: usize, upper: usize) -> Result<String> {
     Ok(String::from_utf8(
         block[lower..upper]
             .iter()
@@ -59,10 +68,10 @@ fn block_to_string(block: &[u8], lower: usize, upper: usize) -> Result<String> {
 impl Header {
     pub fn from_bytes(block: &[u8]) -> Result<Header> {
         Ok(Header {
-            name: block_to_string(block, 0, FILENAME_SIZE)?,
-            size: block_to_string(block, FILENAME_SIZE, SIZE_BEGIN)?.parse()?,
-            mtime: block_to_string(block, SIZE_BEGIN, MTIME_BEGIN)?.parse()?,
-            prefix: block_to_string(block, MTIME_BEGIN, HEADER_SIZE)?,
+            name: read_block(block, 0, FILENAME)?,
+            size: read_block(block, SIZE_BEGIN, SIZE_END)?.parse()?,
+            mtime: read_block(block, MTIME_BEGIN, MTIME_END)?.parse()?,
+            prefix: read_block(block, PREFIX_BEGIN, HEADER_SIZE)?,
             bytes: block.to_owned(),
         })
     }
@@ -72,44 +81,40 @@ impl Header {
         let path = path.as_ref();
 
         let name = path.file_name().ok_or(ParseError::NameIsNone)?;
-        let name_len_diff = FILENAME_SIZE
+        FILENAME
             .checked_sub(name.len())
             .ok_or(ParseError::NameLengthExceeded)?;
 
         let name = name.to_string_lossy().to_string();
 
         let size = metadata.size();
-        let size_str = size.to_string().into_bytes();
-        let size_len_diff = CONTENT_SIZE
-            .checked_sub(size_str.len())
+        let size_str = size.to_string();
+        SIZE.checked_sub(size_str.len())
             .ok_or(ParseError::SizeLengthExceeded)?;
 
         let mtime = metadata.mtime();
-        let mtime_str = mtime.to_string().into_bytes();
-        let mtime_len_diff = MTIME_SIZE
+        let mtime_str = mtime.to_string();
+        MTIME
             .checked_sub(mtime_str.len())
             .ok_or(ParseError::MtimeLengthExceeded)?;
 
         let prefix = path
             .parent()
             .map_or(String::from(""), |p| p.to_string_lossy().to_string());
-        let prefix_len_diff = PREFIX_SIZE
+        PREFIX
             .checked_sub(prefix.len())
             .ok_or(ParseError::PrefixLengthExceeded)?;
 
-        let bytes: Vec<u8> = [
-            name.clone().into_bytes(),
-            vec![0; name_len_diff],
-            size_str,
-            vec![0; size_len_diff],
-            mtime_str,
-            vec![0; mtime_len_diff],
-            prefix.clone().into_bytes(),
-            vec![0; prefix_len_diff],
-        ]
-        .into_iter()
-        .flatten()
-        .collect();
+        let mut bytes = Cursor::new(vec![0u8; HEADER_SIZE]);
+        bytes.write_all(name.as_bytes())?;
+        bytes.seek(SeekFrom::Start(FILENAME as u64))?;
+        bytes.write_all(size_str.as_bytes())?;
+        bytes.seek(SeekFrom::Start(SIZE_END as u64))?;
+        bytes.write_all(mtime_str.as_bytes())?;
+        bytes.seek(SeekFrom::Start(MTIME_END as u64))?;
+        bytes.write_all(prefix.as_bytes())?;
+
+        let bytes = bytes.into_inner();
 
         Ok(Header {
             name,
