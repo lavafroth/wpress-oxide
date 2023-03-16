@@ -46,6 +46,7 @@ impl Error for ParseError {}
 
 pub type Result<T> = std::result::Result<T, Box<dyn Error>>;
 
+/// Metadata representation of a file with attributes necessary for an archive entry.
 #[derive(Clone, Debug)]
 pub struct Header {
     pub name: String,
@@ -66,6 +67,7 @@ fn read_block(block: &[u8], lower: usize, upper: usize) -> Result<String> {
 }
 
 impl Header {
+    /// Parse an archive metadata entry for a file from a block of bytes.
     pub fn from_bytes(block: &[u8]) -> Result<Header> {
         Ok(Header {
             name: read_block(block, 0, FILENAME)?,
@@ -76,6 +78,7 @@ impl Header {
         })
     }
 
+    /// Generate an archive metadata entry for a file given its path.
     pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Header> {
         let metadata = std::fs::metadata(&path)?;
         let path = path.as_ref();
