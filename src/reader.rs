@@ -6,6 +6,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
+/// Structure that can read, parse and extract a wpress archive file.
 pub struct Reader {
     file: std::fs::File,
     headers: Vec<Header>,
@@ -41,6 +42,19 @@ impl Reader {
     }
 
     /// Extracts all the files inside the archive to the provided destination directory.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use std::fs::remove_dir_all;
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    ///     use wpress_oxide::Reader;
+    ///     let mut r = Reader::new("tests/reader/archive.wpress")?;
+    ///     r.extract_to("tests/reader_output_0")?;
+    /// #    remove_dir_all("tests/reader_output_0")?;
+    /// #    Ok(())
+    /// # }
+    /// ```
     pub fn extract_to<P: AsRef<Path>>(&mut self, destination: P) -> Result<()> {
         let destination = destination.as_ref();
         self.file.rewind()?;
@@ -57,6 +71,17 @@ impl Reader {
     }
 
     /// Extracts all the files inside the archive to the current directory.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    ///     use wpress_oxide::Reader;
+    ///     let mut r = Reader::new("tests/reader/archive.wpress")?;
+    ///     r.extract()?;
+    /// #    Ok(())
+    /// # }
+    /// ```
     pub fn extract(&mut self) -> Result<()> {
         self.extract_to(".")
     }
@@ -78,6 +103,38 @@ impl Reader {
 
     /// Extract a single file, given either its name or *complete path inside the archive*, to a
     /// destination directory. Preserves the directory hierarchy of the archive during extraction.
+    ///
+    /// # Examples
+    ///
+    /// ## Extract all files from the archive that match a filename
+    ///
+    /// ```
+    /// # use std::fs::remove_dir_all;
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    ///     use wpress_oxide::Reader;
+    ///     let mut r = Reader::new("tests/reader/archive.wpress")?;
+    ///     r.extract_file("file.txt", "tests/reader_output_1")?;
+    /// #    remove_dir_all("tests/reader_output_1")?;
+    /// #    Ok(())
+    /// # }
+    /// ```
+    ///
+    /// ## Extract a file with a specific path in the archive
+    ///
+    /// ```
+    /// # use std::fs::remove_dir_all;
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    ///     use wpress_oxide::Reader;
+    ///     let mut r = Reader::new("tests/reader/archive.wpress")?;
+    ///     r.extract_file(
+    ///         "tests/writer/directory/subdirectory/file.txt",
+    ///         "tests/reader_output_2",
+    ///     )?;
+    /// #    remove_dir_all("tests/reader_output_2")?;
+    /// #    Ok(())
+    /// # }
+    /// ```
+
     pub fn extract_file<P: AsRef<Path>>(&mut self, filename: P, destination: P) -> Result<()> {
         self.file.rewind()?;
         let mut offset = 0;

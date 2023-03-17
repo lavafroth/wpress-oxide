@@ -5,6 +5,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
+/// Structure to write multiple files and corresponding metadata into a wpress archive.
 pub struct Writer {
     file: std::fs::File,
     paths: Vec<PathBuf>,

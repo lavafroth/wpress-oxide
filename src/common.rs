@@ -36,7 +36,7 @@ impl fmt::Display for ParseError {
             Self::SizeLengthExceeded => "String representation of the file's size exceeds the maximum of 14 bytes",
             Self::MtimeLengthExceeded => "String representation of the file's UNIX modified time exceeds the maximum of 12 bytes",
             Self::PrefixLengthExceeded => "String representation of the file's parent directories exceeds the maximum of 4096 bytes",
-                Self::IncompleteHeader => "While reading file: Header block ended prematurely."
+            Self::IncompleteHeader => "While reading file: Header block ended prematurely."
         };
         write!(f, "{}", err)
     }
@@ -49,10 +49,16 @@ pub type Result<T> = std::result::Result<T, Box<dyn Error>>;
 /// Metadata representation of a file with attributes necessary for an archive entry.
 #[derive(Clone, Debug)]
 pub struct Header {
+    /// Base name of the file from an entry.
     pub name: String,
+    /// Size of the file in bytes.
     pub size: u64,
+    /// Last modified time relative to UNIX epochs.
     pub mtime: u64,
+    /// Path of the file without the final component, its name.
     pub prefix: String,
+    /// A representation of `name`, `size`, `mtime` and `perfix` in a blob of bytes.
+    /// Each field is zero padded to meets predefined boundaries.
     pub bytes: Vec<u8>,
 }
 
