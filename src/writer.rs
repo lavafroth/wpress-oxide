@@ -1,4 +1,4 @@
-use crate::common::{Header, Result, EOF_BLOCK};
+use crate::common::{Header, EOF_BLOCK};
 use std::{
     fs::File,
     io::{copy, Write},
@@ -13,7 +13,7 @@ pub struct Writer {
 
 impl Writer {
     /// Creates a new `Writer` with the destination being the path supplied.
-    pub fn new<P: AsRef<Path>>(path: P) -> Result<Writer> {
+    pub fn new<P: AsRef<Path>>(path: P) -> Result<Writer, Box<dyn std::error::Error>> {
         Ok(Writer {
             file: File::create(path)?,
             paths: vec![],
@@ -23,7 +23,7 @@ impl Writer {
     /// Lazily adds paths to the `Writer`. It merely tells the `Writer` to note the supplied path
     /// and does not write to the underlying file. To write to the underlying file, use the
     /// `write` method after `add`ing all the files.
-    pub fn add<P: AsRef<Path>>(&mut self, path: P) -> Result<()> {
+    pub fn add<P: AsRef<Path>>(&mut self, path: P) -> Result<(), Box<dyn std::error::Error>> {
         let path = path.as_ref();
         // If the given path is a directory,
         // recursively add all the files and
@@ -42,7 +42,7 @@ impl Writer {
     /// Writes header structures and associated data to the underlying file handle. Since the
     /// object is consumed, the file is closed on drop, making sure we cannot incorrectly write
     /// multiple times to the same file.
-    pub fn write(mut self) -> Result<()> {
+    pub fn write(mut self) -> Result<(), Box<dyn std::error::Error>> {
         for path in self.paths.iter() {
             let header = Header::from_file(path)?;
             println!("{:?}", header);

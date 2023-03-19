@@ -1,7 +1,7 @@
 [package]
 name = "wpress-oxide"
 description = "A rust library to interact with the wpress archive format."
-version = "1.1.1"
+version = "2.0.0-alpha"
 edition = "2021"
 readme = "README.md"
 repository = "https://github.com/lavafroth/wpress-oxide"
@@ -17,3 +17,4 @@ include = [
 
 [dependencies]
 clean-path = "0.2.1"
+thiserror = "1.0.40"

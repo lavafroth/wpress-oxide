@@ -1,9 +1,9 @@
-use crate::common::{Header, ParseError, Result, EOF_BLOCK, HEADER_SIZE};
+use crate::common::{FileParseError, Header, EOF_BLOCK, HEADER_SIZE};
 use clean_path::Clean;
 use std::{
     fs::{create_dir_all, File},
     io::{self, Read, Seek, SeekFrom},
-    path::{Path, PathBuf},
+    path::{Path, PathBuf, StripPrefixError},
 };
 
 /// Structure that can read, parse and extract a wpress archive file.
@@ -12,7 +12,7 @@ pub struct Reader {
     headers: Vec<Header>,
 }
 
-fn trim_clean<P: AsRef<Path>>(path: P) -> Result<PathBuf> {
+fn trim_clean<P: AsRef<Path>>(path: P) -> Result<PathBuf, StripPrefixError> {
     let cleaned = path.as_ref().clean();
     if cleaned.starts_with("/") {
         return Ok(cleaned.strip_prefix("/")?.to_path_buf());
@@ -22,13 +22,13 @@ fn trim_clean<P: AsRef<Path>>(path: P) -> Result<PathBuf> {
 
 impl Reader {
     /// Creates a new `Reader` with the path supplied as the source file.
-    pub fn new<P: AsRef<Path>>(path: P) -> Result<Reader> {
+    pub fn new<P: AsRef<Path>>(path: P) -> Result<Reader, Box<dyn std::error::Error>> {
         let mut file = std::fs::File::open(path)?;
         let mut headers = Vec::new();
         let mut buf = vec![0; HEADER_SIZE];
         loop {
             if HEADER_SIZE != file.read(&mut buf)? {
-                Err(ParseError::IncompleteHeader)?;
+                Err(FileParseError::IncompleteHeader)?;
             }
             if EOF_BLOCK == buf {
                 break;
@@ -55,7 +55,10 @@ impl Reader {
     /// #    Ok(())
     /// # }
     /// ```
-    pub fn extract_to<P: AsRef<Path>>(&mut self, destination: P) -> Result<()> {
+    pub fn extract_to<P: AsRef<Path>>(
+        &mut self,
+        destination: P,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let destination = destination.as_ref();
         self.file.rewind()?;
         for header in self.headers.iter() {
@@ -82,7 +85,7 @@ impl Reader {
     /// #    Ok(())
     /// # }
     /// ```
-    pub fn extract(&mut self) -> Result<()> {
+    pub fn extract(&mut self) -> Result<(), Box<dyn std::error::Error>> {
         self.extract_to(".")
     }
 
@@ -135,7 +138,11 @@ impl Reader {
     /// # }
     /// ```
 
-    pub fn extract_file<P: AsRef<Path>>(&mut self, filename: P, destination: P) -> Result<()> {
+    pub fn extract_file<P: AsRef<Path>>(
+        &mut self,
+        filename: P,
+        destination: P,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         self.file.rewind()?;
         let mut offset = 0;
         let q = filename.as_ref();
