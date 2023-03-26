@@ -1,4 +1,4 @@
-use crate::common::{FileParseError, Header, EOF_BLOCK, HEADER_SIZE};
+use crate::common::{ExtractError, FileParseError, Header, HeaderError, EOF_BLOCK, HEADER_SIZE};
 use clean_path::Clean;
 use std::{
     fs::{create_dir_all, File},
@@ -22,13 +22,13 @@ fn trim_clean<P: AsRef<Path>>(path: P) -> Result<PathBuf, StripPrefixError> {
 
 impl Reader {
     /// Creates a new `Reader` with the path supplied as the source file.
-    pub fn new<P: AsRef<Path>>(path: P) -> Result<Reader, Box<dyn std::error::Error>> {
+    pub fn new<P: AsRef<Path>>(path: P) -> Result<Reader, FileParseError> {
         let mut file = std::fs::File::open(path)?;
         let mut headers = Vec::new();
         let mut buf = vec![0; HEADER_SIZE];
         loop {
             if HEADER_SIZE != file.read(&mut buf)? {
-                Err(FileParseError::IncompleteHeader)?;
+                Err(FileParseError::Header(HeaderError::IncompleteHeader))?;
             }
             if EOF_BLOCK == buf {
                 break;
@@ -55,10 +55,7 @@ impl Reader {
     /// #    Ok(())
     /// # }
     /// ```
-    pub fn extract_to<P: AsRef<Path>>(
-        &mut self,
-        destination: P,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn extract_to<P: AsRef<Path>>(&mut self, destination: P) -> Result<(), ExtractError> {
         let destination = destination.as_ref();
         self.file.rewind()?;
         for header in self.headers.iter() {
@@ -85,7 +82,7 @@ impl Reader {
     /// #    Ok(())
     /// # }
     /// ```
-    pub fn extract(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn extract(&mut self) -> Result<(), ExtractError> {
         self.extract_to(".")
     }
 
@@ -142,7 +139,7 @@ impl Reader {
         &mut self,
         filename: P,
         destination: P,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    ) -> Result<(), ExtractError> {
         self.file.rewind()?;
         let mut offset = 0;
         let q = filename.as_ref();
