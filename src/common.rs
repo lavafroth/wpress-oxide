@@ -1,6 +1,6 @@
 use std::{
     io::{Cursor, Seek, SeekFrom, Write},
-    path::Path,
+    path::{Path, StripPrefixError},
     string::FromUtf8Error,
     time::SystemTime,
 };
@@ -24,14 +24,24 @@ pub enum FileParseError {
     Metadata,
     #[error("failed to read file name")]
     EmptyName,
-    #[error("archive header ended prematurely")]
-    IncompleteHeader,
     #[error("failed to read last modified time for file")]
     ReadLastModified,
     #[error("failed to cast last modified date in terms of unix epoch for file")]
     UnixEpoch,
     #[error("{0}")]
     Length(#[from] LengthExceededError),
+    #[error("{0}")]
+    Header(#[from] HeaderError),
+    #[error("failed reading from file: {0}")]
+    FileRead(#[from] std::io::Error),
+}
+
+#[derive(Error, Debug)]
+pub enum ExtractError {
+    #[error("failed to strip path prefix and sanitize it: {0}")]
+    PathSanitization(#[from] StripPrefixError),
+    #[error("failed writing to file: {0}")]
+    FileRead(#[from] std::io::Error),
 }
 
 #[derive(Error, Debug)]
@@ -74,6 +84,14 @@ pub enum Field {
 }
 
 #[derive(Error, Debug)]
+pub enum HeaderError {
+    #[error("failed parsing block: {0}")]
+    BlockParseError(#[from] BlockParseError),
+    #[error("header ended prematurely")]
+    IncompleteHeader,
+}
+
+#[derive(Error, Debug)]
 pub enum BlockParseError {
     #[error("failed to parse field {0:?} from block as utf-8 string")]
     FromUtf8Error(Field),
@@ -93,7 +111,7 @@ fn read_block(block: &[u8], lower: usize, upper: usize) -> Result<String, FromUt
 
 impl Header {
     /// Parse an archive metadata entry for a file from a block of bytes.
-    pub fn from_bytes(block: &[u8]) -> Result<Header, BlockParseError> {
+    pub fn from_bytes(block: &[u8]) -> Result<Header, HeaderError> {
         Ok(Header {
             name: read_block(block, 0, FILENAME)
                 .map_err(|_| BlockParseError::FromUtf8Error(Field::Name))?,
