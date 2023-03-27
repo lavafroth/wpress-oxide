@@ -44,6 +44,20 @@ pub enum ExtractError {
     FileRead(#[from] std::io::Error),
 }
 
+#[derive(Debug, Error)]
+pub enum ArchiveError {
+    #[error("failed to create archive file: {0}")]
+    FileCreation(std::io::Error),
+    #[error("failed to add file entry to archive: {0}")]
+    EntryAddition(std::io::Error),
+    #[error("failed to traverse and recursively add files to archive: {0}")]
+    DirectoryTraversal(std::io::Error),
+    #[error("{0}")]
+    FileParse(#[from] FileParseError),
+    #[error("failed writing to archive: {0}")]
+    FileWrite(std::io::Error),
+}
+
 #[derive(Error, Debug)]
 pub enum LengthExceededError {
     #[error("Filename is longer than the maximum of 255 bytes")]

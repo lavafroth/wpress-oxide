@@ -2,7 +2,10 @@ mod common;
 mod reader;
 mod writer;
 
-pub use crate::common::{BlockParseError, FileParseError, Header, LengthExceededError};
+pub use crate::common::{
+    ArchiveError, BlockParseError, ExtractError, FileParseError, Header, HeaderError,
+    LengthExceededError,
+};
 pub use crate::reader::Reader;
 pub use crate::writer::Writer;
 

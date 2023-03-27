@@ -1,5 +1,5 @@
 use crate::{
-    common::{Header, EOF_BLOCK},
+    common::{ArchiveError, Header, EOF_BLOCK},
     FileParseError,
 };
 use std::{
@@ -8,28 +8,11 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use thiserror::Error;
-
 /// Structure to write multiple files and corresponding metadata into a wpress archive.
 pub struct Writer {
     file: std::fs::File,
     paths: Vec<PathBuf>,
 }
-
-#[derive(Debug, Error)]
-pub enum ArchiveError {
-    #[error("failed to create archive file: {0}")]
-    FileCreation(std::io::Error),
-    #[error("failed to add file entry to archive: {0}")]
-    EntryAddition(std::io::Error),
-    #[error("failed to traverse and recursively add files to archive: {0}")]
-    DirectoryTraversal(std::io::Error),
-    #[error("{0}")]
-    FileParse(#[from] FileParseError),
-    #[error("failed writing to archive: {0}")]
-    FileWrite(std::io::Error),
-}
-
 impl Writer {
     /// Creates a new `Writer` with the destination being the path supplied.
     pub fn new<P: AsRef<Path>>(path: P) -> Result<Writer, ArchiveError> {

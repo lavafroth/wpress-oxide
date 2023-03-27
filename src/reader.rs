@@ -48,9 +48,9 @@ impl Reader {
     /// ```
     /// # use std::fs::remove_dir_all;
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-    ///     use wpress_oxide::Reader;
-    ///     let mut r = Reader::new("tests/reader/archive.wpress")?;
-    ///     r.extract_to("tests/reader_output_0")?;
+    /// use wpress_oxide::Reader;
+    /// let mut r = Reader::new("tests/reader/archive.wpress")?;
+    /// r.extract_to("tests/reader_output_0")?;
     /// #    remove_dir_all("tests/reader_output_0")?;
     /// #    Ok(())
     /// # }
@@ -76,9 +76,9 @@ impl Reader {
     ///
     /// ```
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-    ///     use wpress_oxide::Reader;
-    ///     let mut r = Reader::new("tests/reader/archive.wpress")?;
-    ///     r.extract()?;
+    /// use wpress_oxide::Reader;
+    /// let mut r = Reader::new("tests/reader/archive.wpress")?;
+    /// r.extract()?;
     /// #    Ok(())
     /// # }
     /// ```
@@ -111,9 +111,9 @@ impl Reader {
     /// ```
     /// # use std::fs::remove_dir_all;
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-    ///     use wpress_oxide::Reader;
-    ///     let mut r = Reader::new("tests/reader/archive.wpress")?;
-    ///     r.extract_file("file.txt", "tests/reader_output_1")?;
+    /// use wpress_oxide::Reader;
+    /// let mut r = Reader::new("tests/reader/archive.wpress")?;
+    /// r.extract_file("file.txt", "tests/reader_output_1")?;
     /// #    remove_dir_all("tests/reader_output_1")?;
     /// #    Ok(())
     /// # }
@@ -124,12 +124,12 @@ impl Reader {
     /// ```
     /// # use std::fs::remove_dir_all;
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-    ///     use wpress_oxide::Reader;
-    ///     let mut r = Reader::new("tests/reader/archive.wpress")?;
-    ///     r.extract_file(
-    ///         "tests/writer/directory/subdirectory/file.txt",
-    ///         "tests/reader_output_2",
-    ///     )?;
+    /// use wpress_oxide::Reader;
+    /// let mut r = Reader::new("tests/reader/archive.wpress")?;
+    /// r.extract_file(
+    ///     "tests/writer/directory/subdirectory/file.txt",
+    ///     "tests/reader_output_2",
+    /// )?;
     /// #    remove_dir_all("tests/reader_output_2")?;
     /// #    Ok(())
     /// # }
