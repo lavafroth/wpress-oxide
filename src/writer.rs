@@ -46,7 +46,7 @@ impl Writer {
     /// multiple times to the same file.
     pub fn write(mut self) -> Result<(), ArchiveError> {
         for path in self.paths.iter() {
-            let header = Header::from_file(path)?;
+            let header = Header::from_file_metadata(path)?;
             let mut handle = File::open(path).map_err(FileParseError::FileRead)?;
             self.file
                 .write_all(&header.bytes)

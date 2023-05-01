@@ -144,7 +144,21 @@ impl Header {
     }
 
     /// Generate an archive metadata entry for a file given its path.
-    pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Header, FileParseError> {
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use wpress_oxide::Header;
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let header = Header::from_file_metadata("tests/writer/file.txt")?;
+    /// assert_eq!(header.name, "file.txt");
+    /// assert_eq!(header.size, 5);
+    /// assert_eq!(header.prefix, "tests/writer");
+    /// #    Ok(())
+    /// # }
+    /// ```
+
+    pub fn from_file_metadata<P: AsRef<Path>>(path: P) -> Result<Header, FileParseError> {
         let path = path.as_ref();
         let metadata = std::fs::metadata(path).map_err(|_| FileParseError::Metadata)?;
 
