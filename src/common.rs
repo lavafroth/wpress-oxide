@@ -139,7 +139,7 @@ impl Header {
                 .map_err(|_| BlockParseError::IntoU64Error(Field::Mtime))?,
             prefix: read_block(block, PREFIX_BEGIN, HEADER_SIZE)
                 .map_err(|_| BlockParseError::FromUtf8Error(Field::Prefix))?,
-            bytes: block.to_owned(),
+            bytes: block.to_vec(),
         })
     }
 
@@ -195,13 +195,13 @@ impl Header {
         let mut bytes = Cursor::new(vec![0u8; HEADER_SIZE]);
 
         // If any of the following fails, panic. Something is very wrong.
-        bytes.write_all(name.as_bytes()).unwrap();
-        bytes.seek(SeekFrom::Start(FILENAME as u64)).unwrap();
-        bytes.write_all(size_str.as_bytes()).unwrap();
-        bytes.seek(SeekFrom::Start(SIZE_END as u64)).unwrap();
-        bytes.write_all(mtime_str.as_bytes()).unwrap();
-        bytes.seek(SeekFrom::Start(MTIME_END as u64)).unwrap();
-        bytes.write_all(prefix.as_bytes()).unwrap();
+        bytes.write_all(name.as_bytes())?;
+        bytes.seek(SeekFrom::Start(FILENAME as u64))?;
+        bytes.write_all(size_str.as_bytes())?;
+        bytes.seek(SeekFrom::Start(SIZE_END as u64))?;
+        bytes.write_all(mtime_str.as_bytes())?;
+        bytes.seek(SeekFrom::Start(MTIME_END as u64))?;
+        bytes.write_all(prefix.as_bytes())?;
 
         let bytes = bytes.into_inner();
 

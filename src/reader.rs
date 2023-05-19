@@ -91,8 +91,8 @@ impl Reader {
         self.headers.len()
     }
 
-    /// Returns a borrowed vector of headers or metadata about the files in the archive.
-    pub fn headers(&self) -> &Vec<Header> {
+    /// Returns a borrowed header slice with metadata about the files in the archive.
+    pub fn headers(&self) -> &[Header] {
         &self.headers
     }
 
@@ -142,14 +142,16 @@ impl Reader {
     ) -> Result<(), ExtractError> {
         self.file.rewind()?;
         let mut offset = 0;
-        let q = filename.as_ref();
+        let filename = filename.as_ref();
         let destination = destination.as_ref();
+
         for header in self.headers.iter() {
             offset += HEADER_SIZE as u64;
             let original_path = [&header.prefix, &header.name].iter().collect::<PathBuf>();
             let clean = trim_clean(&original_path)?;
-            println!("{:?}", clean);
-            if Path::new(&header.name) == q || clean == q || original_path == q {
+
+            if Path::new(&header.name) == filename || clean == filename || original_path == filename
+            {
                 let path = destination.join(clean);
                 let dir = path.parent().unwrap_or(destination);
                 create_dir_all(dir)?;
