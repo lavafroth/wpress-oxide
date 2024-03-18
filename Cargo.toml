@@ -17,4 +17,4 @@ include = [
 
 [dependencies]
 clean-path = "0.2.1"
-thiserror = "1.0.57"
+thiserror = "1.0.58"
